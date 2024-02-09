@@ -8,11 +8,22 @@
 | o Remove these comments to get 1326 bytes source code (*NIX end-of-line) |
 \**************************************************************************/
 
-#include <zephyr/kernel.h>
-#include <zephyr/sys/printk.h>
-#include <zephyr/console/console.h>
+#if defined(CONFIG_ARCH_POSIX)
+	#include <stdio.h>
+#else
+	#include <zephyr/kernel.h>
+	#include <zephyr/sys/printk.h>
+	#include <zephyr/console/console.h>
+#endif
 
-char* l = "ustvrtsuqqqqqqqqyyyyyyyy}{|~z|{}"
+const char* l =
+	// initial board
+	"ustvrtsu"
+	"qqqqqqqq"
+	"yyyyyyyy"
+	"}{|~z|{}"
+
+	// points by piece; points for center; piece letters; movements
 		  "   76Lsabcddcba .pknbrq  PKNBRQ ?A6J57IKJT576,+-48HLSU";
 
 int B, i, y, u, b, I[411], * G = I, x = 10, z = 15, M = 1e4;
@@ -23,7 +34,7 @@ int X(int w, int c, int h, int e, int S, int s) {
 	G++;
 	d = w || s && s >= h && X(0, 0, 0, 21, 0, 0) > M;
 	do { ;
-		if (o = I[p = O]) {
+		if ((o = I[p = O])) {
 			q = o & z ^ y;
 			if (q < 7) {
 				A = q-- & 2 ? 8 : 4;
@@ -83,28 +94,40 @@ int X(int w, int c, int h, int e, int S, int s) {
 }
 
 int my_getc() {
-	for (;;) {
-		int got = console_getchar();
-		if (got) {
-			printk("%c", got);
-			if (got == 0x0d) { printk("\x0a"); got = 0x0a; }
-			return got;
+	#if defined(CONFIG_ARCH_POSIX)
+		return getchar();
+	#else
+		for (;;) {
+			int got = console_getchar();
+			if (got) {
+				printk("%c", got);
+				if (got == 0x0d) { printk("\x0a"); got = 0x0a; }
+				return got;
+			}
 		}
-	}
+	#endif
+}
+
+void my_putc(char ch) {
+	#if defined(CONFIG_ARCH_POSIX)
+		putchar(ch);
+	#else
+		printk("%c", ch);
+	#endif
 }
 int main() {
-	console_init();
+	#if !defined(CONFIG_ARCH_POSIX)
+		console_init();
+	#endif
 	while (++B < 121) { *G++ = B / x % x < 2 | B % x < 2 ? 7 : B / x & 4 ? 0 : *l++ & 31; }
 	while (B = 19) {
-		while (B++ < 99) { printk("%c", B % x ? l[B[I] | 16] : x); }
+		while (B++ < 99) { my_putc(B % x ? l[B[I] | 16] : x); }
 		if (x - (B = my_getc() & z)) {
 			i = I[B += (x - my_getc() & z) * x] & z;
 			b = my_getc() & z;
 			b += (x - my_getc() & z) * x;
 			while (x - (*G = my_getc() & z)) { i = *G ^ 8 ^ y; }
 		} else { X(0, 0, 0, 21, u, 5); }
-		X(
-			0, 0, 0, 21, u, 1
-		);
+		X(0, 0, 0, 21, u, 1);
 	}
 }
