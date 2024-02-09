@@ -17,13 +17,16 @@
 	#include <zephyr/console/console.h>
 #endif
 
-const char* l =
+#define MAX_LEVEL 5
+
+const char* default_board =
 	// initial board
 	"ustvrtsu"
 	"qqqqqqqq"
 	"yyyyyyyy"
-	"}{|~z|{}"
+	"}{|~z|{}";
 
+const char* ref =
 	// points by piece
 	"   76Ls"
 
@@ -31,12 +34,14 @@ const char* l =
 	"abcddcba "
 
 	// piece letters
-	".pknbrq  PKNBRQ "
+	".pknbrq  PKNBRQ " /* no longer needed */
 
 	// movements
 	"?A6J57IKJT576,+-48HLSU";
 
-int origin_of_move, final_piece_for_promotion, can_en_passant;
+const char* piece_letters = ".pknbrq  PKNBRQ ";
+
+int origin_of_move, promote_to, can_en_passant;
 int target_of_move, board[411], *best_enemy_move = board;
 char actual_side = 0;
 
@@ -67,7 +72,7 @@ int next(
 					"& .$  "[current_piece] : 42;
 
 				do {
-					target_square += l[movement_offset] - 64;
+					target_square += ref[movement_offset] - 64;
 					original_target_content = board[target_square];
 					if (!recapture_square | (target_square == recapture_square)) {
 						tmp_square = current_piece |
@@ -85,13 +90,13 @@ int next(
 							int before_pawn = board[target_square - pawn_direction] & 0xf;
 							int limit_piece = current_piece | (before_pawn - 7) ? final_piece : (final_piece += 2, 6 ^ actual_side);
 							while (final_piece <= limit_piece) {
-								score = original_target_content ? l[original_target_content & 7] * 9 - 189 - level - current_piece : 0;
+								score = original_target_content ? ref[original_target_content & 7] * 9 - 189 - level - current_piece : 0;
 								if (max_level) {
 									score += (
-											 1 - current_piece ? l[target_square / 10 + 5] - l[origin_square / 10 + 5] + l[target_square % 10 + 6] * -~!current_piece - l[origin_square % 10 + 6] +
+											 1 - current_piece ? ref[target_square / 10 + 5] - ref[origin_square / 10 + 5] + ref[target_square % 10 + 6] * -~!current_piece - ref[origin_square % 10 + 6] +
 													 original_content / 16 * 8 : (rook_origin ? 1 : 0) * 9
 										 ) + (
-											 current_piece ? 0 : !(board[target_square - 1] ^ final_piece) + !(board[target_square + 1] ^ final_piece) + l[final_piece & 7] * 9 - 386 + (tmp_square ? 1 : 0) * 99 +
+											 current_piece ? 0 : !(board[target_square - 1] ^ final_piece) + !(board[target_square + 1] ^ final_piece) + ref[final_piece & 7] * 9 - 386 + (tmp_square ? 1 : 0) * 99 +
 													 (limit_offset < 2)
 										 ) + !(before_pawn ^ actual_side ^ 9);
 								}
@@ -99,7 +104,7 @@ int next(
 									board[target_square] = final_piece, board[origin_square] = rook_origin && tmp_square ? *tmp_square = *rook_origin, *rook_origin = 0 : tmp_square ? *tmp_square = 0 : 0;
 									score -= next((max_level > level) | in_check ? 0 : target_square, score - net_score, level + 1, best_enemy_move[1], cant_castle = (current_piece | (limit_offset > 1)) ? 0 : target_square, max_level);
 									if (!(
-										level || (max_level - 1) | (origin_of_move - origin_square) | (final_piece_for_promotion - final_piece) | (target_square - target_of_move) | (score < -10000)
+										level || (max_level - 1) | (origin_of_move - origin_square) | (promote_to - final_piece) | (target_square - target_of_move) | (score < -10000)
 									)) {
 										--best_enemy_move;
 										switch_sides(); switch_sides();
@@ -119,7 +124,7 @@ int next(
 											switch_sides();
 											return --best_enemy_move, score;
 										}
-										if (!level) { final_piece_for_promotion = final_piece, origin_of_move = origin_square, target_of_move = target_square; }
+										if (!level) { promote_to = final_piece, origin_of_move = origin_square, target_of_move = target_square; }
 									}
 									net_score = score;
 								}
@@ -164,21 +169,66 @@ void my_putc(char ch) {
 		printk("%c", ch);
 	#endif
 }
+
+void my_puts(const char* s) {
+	while (*s) { my_putc(*s++); }
+}
+
+static inline char next_default_piece(int offset) {
+	if (offset / 10 % 10 < 2 || offset % 10 < 2) { return 7; }
+	if (offset / 10 & 4) { return 0; }
+	return *default_board++ & 31;
+}
+
+static inline void setup_board() {
+	origin_of_move = 0;
+	while (++origin_of_move < 121) {
+		*best_enemy_move++ = next_default_piece(origin_of_move);
+	}
+}
+
+static inline void print_board() {
+	int i = 19;
+	while (i++ < 99) {
+		if (i % 10) {
+			my_putc(piece_letters[board[i] & ~16]);
+		} else { my_putc('\n'); }
+	}
+}
+
+static inline void read_promotion_piece() {
+	promote_to = board[origin_of_move] & 0xf;
+	for (;;) {
+		char ch = my_getc() & 0xf;
+		if (ch == '\n') { break; }
+		promote_to = ch ^ 8 ^ actual_side;
+	}
+}
+
 int main() {
 	#if !defined(CONFIG_ARCH_POSIX)
 		console_init();
 	#endif
-	while (++origin_of_move < 121) {
-		*best_enemy_move++ = ((origin_of_move / 10 % 10 < 2) | (origin_of_move % 10 < 2)) ? 7 : origin_of_move / 10 & 4 ? 0 : *l++ & 31;
-	}
-	while ((origin_of_move = 19)) {
-		while (origin_of_move++ < 99) { my_putc(origin_of_move % 10 ? l[origin_of_move[board] | 16] : 10); }
-		if (10 - (origin_of_move = my_getc() & 0xf)) {
-			final_piece_for_promotion = board[origin_of_move += ((10 - my_getc()) & 0xf) * 10] & 0xf;
+	setup_board();
+	for (;;) {
+		print_board();
+
+		origin_of_move = my_getc() & 0xf;
+		if (origin_of_move != '\n') {
+			origin_of_move += ((10 - my_getc()) & 0xf) * 10;
 			target_of_move = my_getc() & 0xf;
 			target_of_move += ((10 - my_getc()) & 0xf) * 10;
-			while (10 - (*best_enemy_move = my_getc() & 0xf)) { final_piece_for_promotion = *best_enemy_move ^ 8 ^ actual_side; }
-		} else { next(0, 0, 0, 21, can_en_passant, 5); }
+			read_promotion_piece();
+			my_puts("perform move ");
+			my_putc(9 - origin_of_move % 10 + 'A');
+			my_putc(10 - origin_of_move / 10 + '0');
+			my_putc(9 - target_of_move % 10 + 'A');
+			my_putc(10 - target_of_move / 10 + '0');
+			my_putc('\n');
+		} else {
+			my_puts("perform computer move\n");
+			next(0, 0, 0, 21, can_en_passant, MAX_LEVEL);
+		}
 		next(0, 0, 0, 21, can_en_passant, 1);
 	}
 }
