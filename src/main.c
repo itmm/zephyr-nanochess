@@ -8,6 +8,7 @@
 | o Remove these comments to get 1326 bytes source code (*NIX end-of-line) |
 \**************************************************************************/
 
+#include <stdbool.h>
 #if defined(CONFIG_ARCH_POSIX)
 	#include <stdio.h>
 #else
@@ -23,74 +24,122 @@ const char* l =
 	"yyyyyyyy"
 	"}{|~z|{}"
 
-	// points by piece; points for center; piece letters; movements
-		  "   76Lsabcddcba .pknbrq  PKNBRQ ?A6J57IKJT576,+-48HLSU";
+	// points by piece
+	"   76Ls"
 
-int B, i, y, u, b, I[411], * G = I, x = 10, z = 15, M = 1e4;
+	// points for center
+	"abcddcba "
 
-int X(int w, int c, int h, int e, int S, int s) {
-	int t, o, L, E, d, O = e, N = -M * M, K = 78 - h << x, p, * g, n, * m, A, q, r, C, J, a = y ? -x : x;
-	y ^= 8;
-	G++;
-	d = w || s && s >= h && X(0, 0, 0, 21, 0, 0) > M;
-	do { ;
-		if ((o = I[p = O])) {
-			q = o & z ^ y;
-			if (q < 7) {
-				A = q-- & 2 ? 8 : 4;
-				C = o - 9 & z ? q["& .$  "] : 42;
+	// piece letters
+	".pknbrq  PKNBRQ "
+
+	// movements
+	"?A6J57IKJT576,+-48HLSU";
+
+int origin_of_move, final_piece_for_promotion, can_en_passant;
+int target_of_move, board[411], *best_enemy_move = board;
+char actual_side = 0;
+
+static inline void switch_sides() { actual_side ^= 8; }
+
+int next(
+	int recapture_square, int reset_enemy_score, int level,
+	int initial_search_square, int pawn_for_en_passant, int max_level
+) {
+	int original_content, score;
+	int origin_square = initial_search_square, net_score = -100000000;
+	int mate_score = (78 - level) << 10, *tmp_square;
+	int final_piece, *rook_origin, limit_offset, current_piece;
+	int original_target_content, movement_offset, cant_castle;
+	int pawn_direction = actual_side ? -10 : 10;
+	switch_sides();
+	best_enemy_move++;
+	int in_check = recapture_square ||
+		(max_level && max_level >= level && next(0, 0, 0, 21, 0, 0) > 10000);
+
+	do {
+		int target_square = origin_square;
+		if ((original_content = board[target_square])) {
+			current_piece = (original_content & 0xf) ^ actual_side;
+			if (current_piece < 7) {
+				limit_offset = current_piece-- & 2 ? 8 : 4;
+				movement_offset = (original_content - 9) & 0xf ?
+					"& .$  "[current_piece] : 42;
+
 				do {
-					r = I[p += C[l] - 64];
-					if (!w | p == w) {
-						g = q | p + a - S ? 0 : I + S;
-						if (!r & (q | A < 3 || g) || (r + 1 & z ^ y) > 9 && q | A > 2) { ;
-							if (m = !(r - 2 & 7)) { return --G, y ^= 8, G[1] = O, K; }
-							J = n = o & z;
-							E = I[p - a] & z;
-							t = q | E - 7 ? n : (n += 2, 6 ^ y);
-							while (n <= t) {
-								L = r ? l[r & 7] * 9 - 189 - h - q : 0;
-								if (s) {
-									L += (
-											 1 - q ? l[p / x + 5] - l[O / x + 5] + l[p % x + 6] * -~!q - l[O % x + 6] +
-													 o / 16 * 8 : !!m * 9
+					target_square += l[movement_offset] - 64;
+					original_target_content = board[target_square];
+					if (!recapture_square | (target_square == recapture_square)) {
+						tmp_square = current_piece |
+							(target_square + pawn_direction - pawn_for_en_passant) ?
+								0 : board + pawn_for_en_passant;
+
+						if (!original_target_content & (current_piece | (limit_offset < 3) || tmp_square) || ((((original_target_content + 1) & 0xf) ^ actual_side) > 9 && current_piece | (limit_offset > 2))) {
+							if ((rook_origin = (int*) !((original_target_content - 2) & 7))) {
+								--best_enemy_move;
+								best_enemy_move[1] = origin_square;
+								switch_sides();
+								return mate_score;
+							}
+							cant_castle = final_piece = original_content & 0xf;
+							int before_pawn = board[target_square - pawn_direction] & 0xf;
+							int limit_piece = current_piece | (before_pawn - 7) ? final_piece : (final_piece += 2, 6 ^ actual_side);
+							while (final_piece <= limit_piece) {
+								score = original_target_content ? l[original_target_content & 7] * 9 - 189 - level - current_piece : 0;
+								if (max_level) {
+									score += (
+											 1 - current_piece ? l[target_square / 10 + 5] - l[origin_square / 10 + 5] + l[target_square % 10 + 6] * -~!current_piece - l[origin_square % 10 + 6] +
+													 original_content / 16 * 8 : (rook_origin ? 1 : 0) * 9
 										 ) + (
-											 q ? 0 : !(I[p - 1] ^ n) + !(I[p + 1] ^ n) + l[n & 7] * 9 - 386 + !!g * 99 +
-													 (A < 2)
-										 ) + !(E ^ y ^ 9);
+											 current_piece ? 0 : !(board[target_square - 1] ^ final_piece) + !(board[target_square + 1] ^ final_piece) + l[final_piece & 7] * 9 - 386 + (tmp_square ? 1 : 0) * 99 +
+													 (limit_offset < 2)
+										 ) + !(before_pawn ^ actual_side ^ 9);
 								}
-								if (s > h || 1 < s & s == h && L > z | d) {
-									p[I] = n, O[I] = m ? *g = *m, *m = 0 : g ? *g = 0 : 0;
-									L -= X(s > h | d ? 0 : p, L - N, h + 1, G[1], J = q | A > 1 ? 0 : p, s);
+								if (max_level > level || ((1 < max_level) & (max_level == level) && (score > 0xf) | in_check)) {
+									board[target_square] = final_piece, board[origin_square] = rook_origin && tmp_square ? *tmp_square = *rook_origin, *rook_origin = 0 : tmp_square ? *tmp_square = 0 : 0;
+									score -= next((max_level > level) | in_check ? 0 : target_square, score - net_score, level + 1, best_enemy_move[1], cant_castle = (current_piece | (limit_offset > 1)) ? 0 : target_square, max_level);
 									if (!(
-										h || s - 1 | B - O | i - n | p - b | L < -M
+										level || (max_level - 1) | (origin_of_move - origin_square) | (final_piece_for_promotion - final_piece) | (target_square - target_of_move) | (score < -10000)
 									)) {
-										return --G, y ^= 8, y ^= 8, u = J;
+										--best_enemy_move;
+										switch_sides(); switch_sides();
+										return can_en_passant = cant_castle;
 									}
-									J = q - 1 | A < 7 || m || !s | d | r | o < z || X(0, 0, 0, 21, 0, 0) > M;
-									O[I] = o;
-									p[I] = r;
-									m ? *m = *g, *g = 0 : g ? *g = 9 ^ y : 0;
-								};
-								if (L > N) {
-									*G = O;
-									if (s > 1) { ;
-										if (h && c - L < 0) { return --G, y ^= 8, L; }
-										if (!h) { i = n, B = O, b = p; }
-									}
-									N = L;
+									cant_castle = (current_piece - 1) | (limit_offset < 7) || rook_origin || (!max_level) | in_check | original_target_content | (original_content < 0xf) || next(0, 0, 0, 21, 0, 0) > 10000;
+									board[origin_square] = original_content;
+									board[target_square] = original_target_content;
+									rook_origin && tmp_square ?
+										*rook_origin = *tmp_square, *tmp_square = 0 :
+										tmp_square ? *tmp_square = 9 ^ actual_side : 0;
 								}
-								n += J || (g = I + p, m = p < O ? g - 3 : g + 2, *m < z | m[O - p] || I[p += p - O]);
+								if (score > net_score) {
+									*best_enemy_move = origin_square;
+									if (max_level > 1) {
+										if (level && reset_enemy_score - score < 0) {
+											switch_sides();
+											return --best_enemy_move, score;
+										}
+										if (!level) { final_piece_for_promotion = final_piece, origin_of_move = origin_square, target_of_move = target_square; }
+									}
+									net_score = score;
+								}
+								final_piece += cant_castle || (tmp_square = board + target_square, rook_origin = target_square < origin_square ? tmp_square - 3 : tmp_square + 2, (*rook_origin < 0xf) | rook_origin[origin_square - target_square] || board[target_square += target_square - origin_square]);
 							}
 						}
 					}
-				} while (!r & q > 2 || (
-					p = O, q | A > 2 | o > z & !r && ++C * --A
-				));
+				} while (
+					!original_target_content & (current_piece > 2) || (
+						target_square = origin_square, current_piece | (limit_offset > 2) | (
+							(original_content > 0xf) & !original_target_content
+						) && ++movement_offset && --limit_offset
+					)
+				);
 			}
 		}
-	} while (++O > 98 ? O = 20 : e - O);
-	return --G, y ^= 8, N + M * M && N > -K + 1924 | d ? N : 0;
+	} while (++origin_square > 98 ? (origin_square = 20) : initial_search_square - origin_square);
+	--best_enemy_move;
+	switch_sides();
+	return net_score + 100000000 && (net_score > -mate_score + 1924) | in_check ? net_score : 0;
 }
 
 int my_getc() {
@@ -119,15 +168,17 @@ int main() {
 	#if !defined(CONFIG_ARCH_POSIX)
 		console_init();
 	#endif
-	while (++B < 121) { *G++ = B / x % x < 2 | B % x < 2 ? 7 : B / x & 4 ? 0 : *l++ & 31; }
-	while (B = 19) {
-		while (B++ < 99) { my_putc(B % x ? l[B[I] | 16] : x); }
-		if (x - (B = my_getc() & z)) {
-			i = I[B += (x - my_getc() & z) * x] & z;
-			b = my_getc() & z;
-			b += (x - my_getc() & z) * x;
-			while (x - (*G = my_getc() & z)) { i = *G ^ 8 ^ y; }
-		} else { X(0, 0, 0, 21, u, 5); }
-		X(0, 0, 0, 21, u, 1);
+	while (++origin_of_move < 121) {
+		*best_enemy_move++ = ((origin_of_move / 10 % 10 < 2) | (origin_of_move % 10 < 2)) ? 7 : origin_of_move / 10 & 4 ? 0 : *l++ & 31;
+	}
+	while ((origin_of_move = 19)) {
+		while (origin_of_move++ < 99) { my_putc(origin_of_move % 10 ? l[origin_of_move[board] | 16] : 10); }
+		if (10 - (origin_of_move = my_getc() & 0xf)) {
+			final_piece_for_promotion = board[origin_of_move += ((10 - my_getc()) & 0xf) * 10] & 0xf;
+			target_of_move = my_getc() & 0xf;
+			target_of_move += ((10 - my_getc()) & 0xf) * 10;
+			while (10 - (*best_enemy_move = my_getc() & 0xf)) { final_piece_for_promotion = *best_enemy_move ^ 8 ^ actual_side; }
+		} else { next(0, 0, 0, 21, can_en_passant, 5); }
+		next(0, 0, 0, 21, can_en_passant, 1);
 	}
 }
