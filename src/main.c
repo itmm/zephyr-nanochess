@@ -107,7 +107,8 @@ int next(
 										 ) + !(before_pawn ^ actual_side ^ 9);
 								}
 								if (max_level > level || ((1 < max_level) & (max_level == level) && (score > 0xf) | in_check)) {
-									board[(int) target_square] = final_piece, board[(int) origin_square] = rook_origin && tmp_square ? *tmp_square = *rook_origin, *rook_origin = 0 : tmp_square ? *tmp_square = 0 : 0;
+									board[(int) target_square] = final_piece;
+									board[(int) origin_square] = rook_origin && tmp_square ? *tmp_square = *rook_origin, *rook_origin = 0 : tmp_square ? *tmp_square = 0 : 0;
 									score -= next((max_level > level) | in_check ? 0 : target_square, score - net_score, level + 1, best_enemy_move[1], cant_castle = (current_piece | (limit_offset > 1)) ? 0 : target_square, max_level);
 									if (!(
 										level || (max_level - 1) | (origin_of_move - origin_square) | (promote_to - final_piece) | (target_square - target_of_move) | (score < -10000)
