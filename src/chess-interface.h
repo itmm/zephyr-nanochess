@@ -42,10 +42,11 @@
 			[[nodiscard]] char row_ch() const { return row + '0'; }
 		};
 
+		static_assert(sizeof(Position) == 1);
+
 		struct Move {
 			Move(
-				Side side, Position from, Position to, Piece piece,
-				Piece captured = Piece::none, Piece promoted = Piece::none
+				Side side, Position from, Position to, Piece promoted = Piece::none
 			):
 				side { side }, from { from }, to { to }, piece { piece },
 				captured { captured }, promoted { promoted }
