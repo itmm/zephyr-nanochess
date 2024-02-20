@@ -43,8 +43,7 @@ int main() {
 				promote_to = Mek::Chess::piece_from_ch(promote_ch);
 			}
 			engine.move(Mek::Chess::Move {
-				engine.side, from_pos, to_pos, Mek::Chess::Piece::pawn /* TODO */,
-				Mek::Chess::Piece::none /* TODO */, promote_to
+				engine.side, from_pos, to_pos, promote_to
 			});
 		} else { engine.computer_move(); }
 	}

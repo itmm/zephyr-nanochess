@@ -55,7 +55,7 @@ namespace {
 	char* best_enemy_move = board;
 	char actual_side = 0;
 
-	static inline void nano_switch_sides() { actual_side ^= 8; }
+	inline void nano_switch_sides() { actual_side ^= 8; }
 
 	int next(
 		char recapture_square, char reset_enemy_score, char level,
@@ -215,14 +215,14 @@ void Nano_Chess::reset_board() {
 }
 
 void Nano_Chess::move(const Move& move) {
-	origin_of_move = move.from.col_ch() & 0xf;
-	origin_of_move += ((10 - move.from.row_ch()) & 0xf) * 10;
-	target_of_move = move.to.col_ch() & 0xf;
-	target_of_move += ((10 - move.to.row_ch()) & 0xf) * 10;
+	origin_of_move = static_cast<char>(move.from.col_ch() & 0xf);
+	origin_of_move = static_cast<char>(origin_of_move + ((10 - move.from.row_ch()) & 0xf) * 10);
+	target_of_move = static_cast<char>(move.to.col_ch() & 0xf);
+	target_of_move = static_cast<char>(target_of_move + ((10 - move.to.row_ch()) & 0xf) * 10);
 	if (move.promoted != Piece::none) {
 		promote_to = static_cast<char>(move.promoted);
 	} else {
-		promote_to = board[(int) origin_of_move] & 0xf;
+		promote_to = static_cast<char>(board[static_cast<unsigned char>(origin_of_move)] & 0xf);
 	}
 	my_puts("\nperform move ");
 	print_position(origin_of_move);
@@ -236,6 +236,10 @@ void Nano_Chess::move(const Move& move) {
 void Nano_Chess::computer_move() {
 	my_puts("\nperform computer move\n");
 	next(0, 0, 0, 21, can_en_passant, MAX_LEVEL);
+	my_puts("\nchoosen ");
+	print_position(origin_of_move);
+	print_position(target_of_move);
+	my_putc('\n');
 	next(0, 0, 0, 21, can_en_passant, 1);
 	print_board();
 	switch_sides();
