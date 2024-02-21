@@ -69,7 +69,7 @@
 
 				virtual void reset_board() = 0;
 				virtual void move(const Move& move) = 0;
-				virtual void computer_move() = 0;
+				virtual Move compute_move() = 0;
 		};
 	}
 

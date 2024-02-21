@@ -10,7 +10,7 @@
 			public:
 				void reset_board() override;
 				void move(const Move& move) override;
-				void computer_move() override;
+				Move compute_move() override;
 		};
 	}
 

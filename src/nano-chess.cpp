@@ -276,14 +276,14 @@ Position position_from_ch(char ch) {
 	return Position { ch % 10, 10 - ch / 10 };
 }
 
-void Nano_Chess::computer_move() {
+Move Nano_Chess::compute_move() {
 	put_string("\nperform computer move\n");
 	next(0, 0, 0, 21, can_en_passant, MAX_LEVEL);
 	auto origin { position_from_ch(origin_of_move) };
 	auto target { position_from_ch(target_of_move) };
-	move(Move {
+	return Move {
 		origin, target,
 		piece_from_ch(piece_letters[board[origin_of_move] & 0xf]),
 		piece_from_ch(promote_to)
-	});
+	};
 }

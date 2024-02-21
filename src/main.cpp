@@ -52,6 +52,6 @@ int main [[noreturn]]() {
 				put_string("invalid piece, try again\n  "); continue;
 			}
 			engine.move(Mek::Chess::Move { from_pos, to_pos, piece, promote_to });
-		} else { engine.computer_move(); }
+		} else { engine.move(engine.compute_move()); }
 	}
 }
