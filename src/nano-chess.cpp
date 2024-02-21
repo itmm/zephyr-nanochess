@@ -58,37 +58,56 @@ namespace {
 	inline void switch_sides() { actual_side ^= 8; }
 
 	int next(
-		char recapture_square, char reset_enemy_score, char level,
+		char recapture_square, int reset_enemy_score, char level,
 		char initial_search_square, char pawn_for_en_passant, char max_level
 	) {
 		char origin_square = initial_search_square;
 		int net_score = -100000000;
 		const int mate_score = (78 - level) << 10;
-		char* rook_origin = NULL;
+		char* rook_origin = nullptr;
 		const char pawn_direction = actual_side ? -10 : 10;
 		switch_sides();
 		best_enemy_move++;
-		char in_check = recapture_square ||
-						(max_level && max_level >= level && next(0, 0, 0, 21, 0, 0) > 10000);
+		char in_check = static_cast<char>(
+			recapture_square || (
+				max_level && max_level >= level &&
+				next(0, 0, 0, 21, 0, 0) > 10000
+			)
+		);
 
 		do {
 			char target_square = origin_square;
-			char original_content = board[(int) target_square];
+			char original_content = board[
+				static_cast<unsigned char>(target_square)
+			];
 			if (original_content) {
-				char current_piece = (original_content & 0xf) ^ actual_side;
+				char current_piece = static_cast<char>(
+					(original_content & 0xf) ^ actual_side
+				);
 				if (current_piece < 7) {
 					char limit_offset = current_piece-- & 2 ? 8 : 4;
-					char movement_offset = (original_content - 9) & 0xf ?
-						movement_offsets[(int) current_piece] : 42;
+					char movement_offset = static_cast<char>(
+						(original_content - 9) & 0xf ?
+							movement_offsets[
+								static_cast<unsigned char>(current_piece)
+							] :
+							42
+					);
 
 					char original_target_content;
 					do {
-						target_square += ref[(int) movement_offset] - 64;
-						original_target_content = board[(int) target_square];
+						target_square = static_cast<char>(
+							target_square +
+							ref[static_cast<unsigned char>(movement_offset)] -
+							64
+						);
+						original_target_content = board[
+							static_cast<unsigned char>(target_square)
+						];
 						if (!recapture_square | (target_square == recapture_square)) {
 							char *tmp_square = current_piece |
 											   (target_square + pawn_direction - pawn_for_en_passant) ?
-								0 : board + pawn_for_en_passant;
+								nullptr : board + pawn_for_en_passant;
 
 							if (!original_target_content & (current_piece | (limit_offset < 3) || tmp_square) || ((((original_target_content + 1) & 0xf) ^ actual_side) > 9 && current_piece | (limit_offset > 2))) {
 								if (!((original_target_content - 2) & 7)) {
@@ -97,10 +116,14 @@ namespace {
 									switch_sides();
 									return mate_score;
 								}
-								char final_piece = original_content & 0xf;
+								char final_piece = static_cast<char>(original_content & 0xf);
 								char cant_castle = final_piece;
-								char before_pawn = board[target_square - pawn_direction] & 0xf;
-								char limit_piece = current_piece | (before_pawn - 7) ? final_piece : (final_piece += 2, 6 ^ actual_side);
+								char before_pawn = static_cast<char>(board[target_square - pawn_direction] & 0xf);
+								char limit_piece = static_cast<char>(
+									current_piece | (before_pawn - 7) ?
+										final_piece :
+										(final_piece += 2, 6 ^ actual_side)
+								);
 								while (final_piece <= limit_piece) {
 									int score = original_target_content ? ref[original_target_content & 7] * 9 - 189 - level - current_piece : 0;
 									if (max_level) {
@@ -113,9 +136,22 @@ namespace {
 												 ) + !(before_pawn ^ actual_side ^ 9);
 									}
 									if (max_level > level || ((1 < max_level) & (max_level == level) && (score > 0xf) | in_check)) {
-										board[(int) target_square] = final_piece;
-										board[(int) origin_square] = rook_origin && tmp_square ? *tmp_square = *rook_origin, *rook_origin = 0 : tmp_square ? *tmp_square = 0 : 0;
-										score -= next((max_level > level) | in_check ? 0 : target_square, score - net_score, level + 1, best_enemy_move[1], cant_castle = (current_piece | (limit_offset > 1)) ? 0 : target_square, max_level);
+										board[static_cast<unsigned char>(target_square)] = final_piece;
+										board[static_cast<unsigned char>(origin_square)] = static_cast<char>(
+											rook_origin && tmp_square ?
+												*tmp_square = *rook_origin, *rook_origin = 0 :
+												tmp_square ? *tmp_square = 0 : 0
+										);
+										score -= next(
+											static_cast<char>((max_level > level) | in_check ? 0 : target_square),
+											score - net_score,
+											static_cast<char>(level + 1),
+											best_enemy_move[1],
+											cant_castle = static_cast<char>(
+												(current_piece | (limit_offset > 1)) ? 0 : target_square
+											),
+											max_level
+										);
 										if (!(
 											level || (max_level - 1) | (origin_of_move - origin_square) | (promote_to - final_piece) | (target_square - target_of_move) | (score < -10000)
 										)) {
@@ -124,14 +160,14 @@ namespace {
 											switch_sides();
 											return can_en_passant = cant_castle;
 										}
-										cant_castle = (current_piece - 1) | (limit_offset < 7) || rook_origin || (!max_level) | in_check | original_target_content | (original_content < 0xf) || next(0, 0, 0, 21, 0, 0) > 10000;
-										board[(int) origin_square] = original_content;
-										board[(int) target_square] = original_target_content;
+										cant_castle = static_cast<char>((current_piece - 1) | (limit_offset < 7) || rook_origin || (!max_level) | in_check | original_target_content | (original_content < 0xf) || next(0, 0, 0, 21, 0, 0) > 10000);
+										board[static_cast<unsigned char>(origin_square)] = original_content;
+										board[static_cast<unsigned char>(target_square)] = original_target_content;
 										if (rook_origin && tmp_square) {
 											*rook_origin = *tmp_square;
 											*tmp_square = 0;
 										} else if (tmp_square) {
-											*tmp_square = 9 ^ actual_side;
+											*tmp_square = static_cast<char>(9 ^ actual_side);
 										}
 									}
 									if (score > net_score) {
@@ -150,7 +186,7 @@ namespace {
 										}
 										net_score = score;
 									}
-									final_piece += cant_castle || (tmp_square = board + target_square, rook_origin = target_square < origin_square ? tmp_square - 3 : tmp_square + 2, (*rook_origin < 0xf) | rook_origin[(int) (origin_square - target_square)] || board[(int) (target_square += target_square - origin_square)]);
+									final_piece = static_cast<char>(final_piece + (cant_castle || (tmp_square = board + target_square, rook_origin = target_square < origin_square ? tmp_square - 3 : tmp_square + 2, (*rook_origin < 0xf) | rook_origin[(int) (origin_square - target_square)] || board[static_cast<unsigned char>(target_square = static_cast<char>(2 * target_square - origin_square))])));
 								}
 							}
 						}
