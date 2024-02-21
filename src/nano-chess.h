@@ -3,6 +3,8 @@
 
 	#include "chess-interface.h"
 
+	void put_string(const char* s);
+
 	namespace Mek::Chess {
 		class Nano_Chess : public Engine {
 			public:

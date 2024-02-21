@@ -228,9 +228,6 @@ namespace {
 		#endif
 	}
 
-	void put_string(const char* s) { while (*s) { put_char(*s++); }
-	}
-
 	inline void print_board() {
 		int i = 19;
 		while (i++ < 99) {
@@ -245,6 +242,8 @@ namespace {
 		put_char(10 - pos / 10 + '0');
 	}
 }
+
+void put_string(const char* s) { while (*s) { put_char(*s++); } }
 
 void Nano_Chess::reset_board() { setup_board(); print_board(); }
 
@@ -265,6 +264,9 @@ void Nano_Chess::move(const Move& move) {
 	put_string("\nperform move ");
 	print_position(origin_of_move);
 	print_position(target_of_move);
+	put_char(' ');
+	put_char(static_cast<char>(move.piece));
+	put_char(static_cast<char>(move.promoted));
 	put_char('\n');
 	next(0, 0, 0, 21, can_en_passant, 1);
 	print_board();
@@ -279,5 +281,9 @@ void Nano_Chess::computer_move() {
 	next(0, 0, 0, 21, can_en_passant, MAX_LEVEL);
 	auto origin { position_from_ch(origin_of_move) };
 	auto target { position_from_ch(target_of_move) };
-	move(Move { origin, target, piece_from_ch(promote_to) });
+	move(Move {
+		origin, target,
+		piece_from_ch(piece_letters[board[origin_of_move] & 0xf]),
+		piece_from_ch(promote_to)
+	});
 }

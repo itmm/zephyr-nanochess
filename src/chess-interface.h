@@ -53,12 +53,13 @@
 		static_assert(sizeof(Position) == 1);
 
 		struct Move {
-			Move(Position from, Position to, Piece promoted = Piece::none):
-				from { from }, to { to }, promoted { promoted }
-			{ assert(from); assert(to); }
+			Move(Position from, Position to, Piece piece, Piece promoted = Piece::none):
+				from { from }, to { to }, piece { piece }, promoted { promoted }
+			{ assert(from); assert(to); assert(piece != Piece::none); }
 
 			const Position from;
 			const Position to;
+			const Piece piece;
 			const Piece promoted;
 		};
 
