@@ -11,7 +11,7 @@
 \**************************************************************************/
 
 #if defined(CONFIG_ARCH_POSIX)
-	#include <stdio.h>
+	#include <cstdio>
 #else
 	#include <zephyr/kernel.h>
 	#include <zephyr/sys/printk.h>
@@ -55,7 +55,7 @@ namespace {
 	char* best_enemy_move = board;
 	char actual_side = 0;
 
-	inline void nano_switch_sides() { actual_side ^= 8; }
+	inline void switch_sides() { actual_side ^= 8; }
 
 	int next(
 		char recapture_square, char reset_enemy_score, char level,
@@ -66,7 +66,7 @@ namespace {
 		const int mate_score = (78 - level) << 10;
 		char* rook_origin = NULL;
 		const char pawn_direction = actual_side ? -10 : 10;
-		nano_switch_sides();
+		switch_sides();
 		best_enemy_move++;
 		char in_check = recapture_square ||
 						(max_level && max_level >= level && next(0, 0, 0, 21, 0, 0) > 10000);
@@ -94,7 +94,7 @@ namespace {
 								if (!((original_target_content - 2) & 7)) {
 									--best_enemy_move;
 									best_enemy_move[1] = origin_square;
-									nano_switch_sides();
+									switch_sides();
 									return mate_score;
 								}
 								char final_piece = original_content & 0xf;
@@ -120,7 +120,8 @@ namespace {
 											level || (max_level - 1) | (origin_of_move - origin_square) | (promote_to - final_piece) | (target_square - target_of_move) | (score < -10000)
 										)) {
 											--best_enemy_move;
-											nano_switch_sides(); nano_switch_sides();
+											switch_sides();
+											switch_sides();
 											return can_en_passant = cant_castle;
 										}
 										cant_castle = (current_piece - 1) | (limit_offset < 7) || rook_origin || (!max_level) | in_check | original_target_content | (original_content < 0xf) || next(0, 0, 0, 21, 0, 0) > 10000;
@@ -137,7 +138,7 @@ namespace {
 										*best_enemy_move = origin_square;
 										if (max_level > 1) {
 											if (level && reset_enemy_score - score < 0) {
-												nano_switch_sides();
+												switch_sides();
 												--best_enemy_move;
 												return score;
 											}
@@ -164,17 +165,17 @@ namespace {
 			}
 		} while (++origin_square > 98 ? (origin_square = 20) : initial_search_square - origin_square);
 		--best_enemy_move;
-		nano_switch_sides();
+		switch_sides();
 		return net_score + 100000000 && (net_score > -mate_score + 1924) | in_check ? net_score : 0;
 	}
 
-	static inline char next_default_piece(int offset) {
+	inline char next_default_piece(int offset) {
 		if (offset / 10 % 10 < 2 || offset % 10 < 2) { return 7; }
 		if (offset / 10 & 4) { return 0; }
-		return *default_board++ & 31;
+		return static_cast<char>(*default_board++ & 31);
 	}
 
-	static inline void setup_board() {
+	inline void setup_board() {
 		default_board = orig_default_board;
 		best_enemy_move = board;
 		origin_of_move = 0;
@@ -183,66 +184,64 @@ namespace {
 		}
 	}
 
-	void my_putc(char ch) {
+	void put_char(int ch) {
 		#if defined(CONFIG_ARCH_POSIX)
 			putchar(ch);
 		#else
-			printk("%c", ch);
+			printk("%c", static_cast<char>(ch));
 		#endif
 	}
 
-	void my_puts(const char* s) {
-		while (*s) { my_putc(*s++); }
+	void put_string(const char* s) { while (*s) { put_char(*s++); }
 	}
 
-	static inline void print_board() {
+	inline void print_board() {
 		int i = 19;
 		while (i++ < 99) {
 			if (i % 10) {
-				my_putc(piece_letters[board[i] & ~16]);
-			} else { my_putc('\n'); }
+				put_char(piece_letters[board[i] & ~16]);
+			} else { put_char('\n'); }
 		}
 	}
 
 	void print_position(int pos) {
-		my_putc(pos % 10 + 'A' - 1); my_putc(10 - pos / 10 + '0');
+		put_char(pos % 10 + 'A' - 1);
+		put_char(10 - pos / 10 + '0');
 	}
 }
 
-void Nano_Chess::reset_board() {
-	Engine::reset_board();
-	setup_board(); print_board();
+void Nano_Chess::reset_board() { setup_board(); print_board(); }
+
+char ch_from_position(const Position& pos) {
+	return static_cast<char>(
+		(pos.col_ch() & 0xf) + ((10 - pos.row_ch()) & 0xf) * 10
+	);
 }
 
 void Nano_Chess::move(const Move& move) {
-	origin_of_move = static_cast<char>(move.from.col_ch() & 0xf);
-	origin_of_move = static_cast<char>(origin_of_move + ((10 - move.from.row_ch()) & 0xf) * 10);
-	target_of_move = static_cast<char>(move.to.col_ch() & 0xf);
-	target_of_move = static_cast<char>(target_of_move + ((10 - move.to.row_ch()) & 0xf) * 10);
+	origin_of_move = ch_from_position(move.from);
+	target_of_move = ch_from_position(move.to);
 	if (move.promoted != Piece::none) {
 		promote_to = static_cast<char>(move.promoted);
 	} else {
 		promote_to = static_cast<char>(board[static_cast<unsigned char>(origin_of_move)] & 0xf);
 	}
-	my_puts("\nperform move ");
+	put_string("\nperform move ");
 	print_position(origin_of_move);
 	print_position(target_of_move);
-	my_putc('\n');
+	put_char('\n');
 	next(0, 0, 0, 21, can_en_passant, 1);
 	print_board();
-	switch_sides();
+}
+
+Position position_from_ch(char ch) {
+	return Position { ch % 10, 10 - ch / 10 };
 }
 
 void Nano_Chess::computer_move() {
-	my_puts("\nperform computer move\n");
+	put_string("\nperform computer move\n");
 	next(0, 0, 0, 21, can_en_passant, MAX_LEVEL);
-	my_puts("\nchoosen ");
-	print_position(origin_of_move);
-	print_position(target_of_move);
-	my_putc('\n');
-	next(0, 0, 0, 21, can_en_passant, 1);
-	print_board();
-	switch_sides();
+	auto origin { position_from_ch(origin_of_move) };
+	auto target { position_from_ch(target_of_move) };
+	move(Move { origin, target, piece_from_ch(promote_to) });
 }
-
-
