@@ -23,10 +23,7 @@ char get_char() {
 	#endif
 }
 
-int main [[noreturn]]() {
-	#if !defined(CONFIG_ARCH_POSIX)
-		console_init();
-	#endif
+void main_loop [[noreturn]] () {
 	Mek::Chess::Nano_Chess engine;
 	engine.reset_board();
 	for (;;) {
@@ -54,4 +51,11 @@ int main [[noreturn]]() {
 			engine.move(Mek::Chess::Move { from_pos, to_pos, piece, promote_to });
 		} else { engine.move(engine.compute_move()); }
 	}
+}
+
+int main() {
+	#if !defined(CONFIG_ARCH_POSIX)
+		console_init();
+	#endif
+	main_loop();
 }

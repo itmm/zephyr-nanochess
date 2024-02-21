@@ -283,7 +283,7 @@ Move Nano_Chess::compute_move() {
 	auto target { position_from_ch(target_of_move) };
 	return Move {
 		origin, target,
-		piece_from_ch(piece_letters[board[origin_of_move] & 0xf]),
+		piece_from_ch(piece_letters[board[static_cast<unsigned char>(origin_of_move)] & 0xf]),
 		piece_from_ch(promote_to)
 	};
 }
