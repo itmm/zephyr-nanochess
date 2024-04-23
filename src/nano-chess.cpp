@@ -266,7 +266,19 @@ void Nano_Chess::move(const Move& move) {
 	print_position(target_of_move);
 	put_char(' ');
 	put_char(static_cast<char>(move.piece));
-	put_char(static_cast<char>(move.promoted));
+
+	if (move.promoted != Piece::none) {
+		put_string(" !");
+		put_char(static_cast<char>(move.promoted));
+	}
+
+	if (move.captured != Piece::none) {
+		put_string(" x");
+		put_char(static_cast<char>(move.captured));
+		if (move.captured_position != move.to) {
+			print_position(ch_from_position(move.captured_position));
+		}
+	}
 	put_char('\n');
 	next(0, 0, 0, 21, can_en_passant, 1);
 	print_board();

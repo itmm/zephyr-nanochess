@@ -50,17 +50,29 @@
 			}
 		};
 
+		inline bool operator==(const Position& a, const Position& b) {
+			return (!a && !b) || (a.col == b.col && a.row == b.row);
+		}
+
+		inline bool operator!=(const Position& a, const Position& b) { return !(a == b); }
+
 		static_assert(sizeof(Position) == 1);
 
 		struct Move {
-			Move(Position from, Position to, Piece piece, Piece promoted = Piece::none):
-				from { from }, to { to }, piece { piece }, promoted { promoted }
+			Move(
+				Position from, Position to, Piece piece, Piece promoted = Piece::none,
+				Piece captured = Piece::none, Position captured_position = Position {}
+			):
+				from { from }, to { to }, piece { piece }, promoted { promoted },
+				captured { captured }, captured_position { captured_position }
 			{ assert(from); assert(to); assert(piece != Piece::none); }
 
 			const Position from;
 			const Position to;
 			const Piece piece;
 			const Piece promoted;
+			const Piece captured;
+			const Position captured_position;
 		};
 
 		class Engine {
