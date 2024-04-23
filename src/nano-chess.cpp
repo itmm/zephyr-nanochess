@@ -288,14 +288,43 @@ Position position_from_ch(char ch) {
 	return Position { ch % 10, 10 - ch / 10 };
 }
 
+Piece piece_on_board(const Position& pos) {
+	return piece_from_ch(piece_letters[
+		board[static_cast<unsigned char>(ch_from_position(pos))] & 0xf
+	]);
+}
+
+bool is_en_passant(const Position& from, const Position& to) {
+	if (piece_on_board(from) != Piece::pawn) { return false; }
+	if (from.col == to.col) { return false; }
+	return piece_on_board(to) == Piece::none;
+}
+
+bool is_capture(const Position& from, const Position& to) {
+	return piece_on_board(to) != Piece::none || is_en_passant(from, to);
+}
+
 Move Nano_Chess::compute_move() {
 	put_string("\nperform computer move\n");
 	next(0, 0, 0, 21, can_en_passant, MAX_LEVEL);
 	auto origin { position_from_ch(origin_of_move) };
 	auto target { position_from_ch(target_of_move) };
-	return Move {
-		origin, target,
-		piece_from_ch(piece_letters[board[static_cast<unsigned char>(origin_of_move)] & 0xf]),
-		piece_from_ch(promote_to)
-	};
+	if (is_capture(origin, target)) {
+		if (is_en_passant(origin, target)) {
+			Position capture_pos { target.col, origin.row };
+			return Move {
+				origin, target, piece_on_board(origin), piece_from_ch(promote_to),
+				piece_on_board(capture_pos), capture_pos
+			};
+		} else {
+			return Move {
+				origin, target, piece_on_board(origin), piece_from_ch(promote_to),
+				piece_on_board(target), target
+			};
+		}
+	} else {
+		return Move {
+			origin, target, piece_on_board(origin), piece_from_ch(promote_to)
+		};
+	}
 }
